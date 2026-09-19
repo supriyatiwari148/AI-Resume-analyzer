@@ -1,0 +1,109 @@
+
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Your Resume Analysis History</h2>
+
+{% if reports %}
+
+    {% for r in reports %}
+
+        <div class="card">
+
+            <p>
+                <strong>Resume Preview:</strong>
+            </p>
+
+            <p>
+                {{ r.resume[:200] }}...
+            </p>
+
+            {% set result = r.result %}
+
+
+            {% if result.get("skills") %}
+
+                <h3>Relevant Skills</h3>
+
+                <ul>
+
+                    {% for skill in result.get("skills", []) %}
+
+                        <li>{{ skill }}</li>
+
+                    {% endfor %}
+
+                </ul>
+
+            {% endif %}
+
+
+            {% if result.get("missing_skills") %}
+
+                <h3>Missing Skills</h3>
+
+                <ul>
+
+                    {% for skill in result.get("missing_skills", []) %}
+
+                        <li>{{ skill }}</li>
+
+                    {% endfor %}
+
+                </ul>
+
+            {% endif %}
+
+
+            {% if result.get("roadmap") %}
+
+                <h3>Learning Roadmap</h3>
+
+                <ul>
+
+                    {% for item in result.get("roadmap", []) %}
+
+                        <li>{{ item }}</li>
+
+                    {% endfor %}
+
+                </ul>
+
+            {% endif %}
+
+
+            {% if result.get("interview_questions") %}
+
+                <h3>Interview Questions</h3>
+
+                <ul>
+
+                    {% for question in result.get("interview_questions", []) %}
+
+                        <li>{{ question }}</li>
+
+                    {% endfor %}
+
+                </ul>
+
+            {% endif %}
+
+        </div>
+
+    {% endfor %}
+
+{% else %}
+
+    <div class="card">
+
+        <p>
+            No resume analysis history yet.
+        </p>
+
+    </div>
+
+{% endif %}
+
+{% endblock %}
+
