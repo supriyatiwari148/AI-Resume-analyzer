@@ -2,6 +2,8 @@
 
 AI Career Copilot is a Flask web application that analyzes a user's resume against a target career goal using a locally-hosted LLM (via [Ollama](https://ollama.com/)). It identifies relevant skills, highlights missing skills, generates a personalized learning roadmap, and produces role-specific interview questions — then saves every analysis to a per-user history.
 
+VIEW THE DEPLOYED PROJECT: https://ai-resume-analyzer-3-4x1m.onrender.com
+
 ## Features
 
 - **User authentication** — simple email/password signup and login with session-based access control
