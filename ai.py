@@ -1,14 +1,16 @@
 import json
 import os
+import traceback
 
 import requests
 
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
-GROQ_MODEL = os.environ.get("GROQ_MODEL", "llama-3.1-8b-instant")
+# .strip() removes spaces / line breaks that sneak in when pasting values into Render
+GROQ_API_KEY = (os.environ.get("GROQ_API_KEY") or "").strip()
+GROQ_MODEL = (os.environ.get("GROQ_MODEL") or "llama-3.1-8b-instant").strip()
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 OLLAMA_URL = "http://localhost:11434/api/generate"
-OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "llama3.2:3b")
+OLLAMA_MODEL = (os.environ.get("OLLAMA_MODEL") or "llama3.2:3b").strip()
 
 MAX_RESUME_CHARS = 12000  # keeps the request small and fast
 
@@ -57,6 +59,10 @@ def empty_result(error):
     }
 
 
+class AIServiceError(Exception):
+    """An error from the AI service whose message is safe to show to the user."""
+
+
 def call_groq(prompt):
     response = requests.post(
         GROQ_URL,
@@ -70,10 +76,16 @@ def call_groq(prompt):
         timeout=120,
     )
     if response.status_code == 401:
-        raise PermissionError("The AI service rejected the API key. Check GROQ_API_KEY.")
+        raise AIServiceError("The AI service rejected the API key. Check GROQ_API_KEY in Render.")
     if response.status_code == 429:
-        raise PermissionError("Too many requests right now. Please wait a moment and try again.")
-    response.raise_for_status()
+        raise AIServiceError("Too many requests right now. Please wait a moment and try again.")
+    if not response.ok:
+        try:
+            detail = response.json().get("error", {}).get("message", "")
+        except ValueError:
+            detail = response.text[:200]
+        print("Groq error:", response.status_code, "model =", GROQ_MODEL, "|", detail)
+        raise AIServiceError(f"AI service error ({response.status_code}): {detail or 'no details'} (model: {GROQ_MODEL})")
     return response.json()["choices"][0]["message"]["content"].strip()
 
 
@@ -97,6 +109,8 @@ def analyze_resume(resume_text, user_goal):
         if not content:
             raise ValueError(f"{service} returned an empty response.")
 
+        if content.startswith("```"):
+            content = content.strip("`").removeprefix("json").strip()
         result = json.loads(content)
         return {
             "skills": result.get("skills", []),
@@ -113,8 +127,8 @@ def analyze_resume(resume_text, user_goal):
         return empty_result(f"{service} took too long to respond.")
     except json.JSONDecodeError:
         return empty_result(f"{service} returned an invalid JSON response. Please try again.")
-    except PermissionError as error:
+    except AIServiceError as error:
         return empty_result(str(error))
     except Exception as error:
-        print("Analyze error:", type(error).__name__, error)
-        return empty_result("Something went wrong while analyzing the resume. Please try again.")
+        traceback.print_exc()   # full details go to the Render logs
+        return empty_result(f"Unexpected error ({type(error).__name__}): {error}")
